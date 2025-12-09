@@ -1,4 +1,4 @@
-# Realtime Orderbook Pipeline (Phase 1 – Ingestion + Kafka)
+# Realtime Orderbook Pipeline
 
 [![Status](https://img.shields.io/badge/Project-Portfolio-green.svg)](#)
 [![Phase](https://img.shields.io/badge/Phase-1%20Ingestion-blue.svg)](#)
