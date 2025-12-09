@@ -1,13 +1,14 @@
+# src/ingestion_service/main.py
 import asyncio
 import os
+
+from prometheus_client import start_http_server
 
 from ingestion_service.simulator import PriceSimulator
 from ingestion_service.producer import run_producer
 
 
 def get_kafka_bootstrap_servers() -> str:
-    # In Docker Compose, use 'kafka:9092'.
-    # Expose it as localhost:9092.
     return os.getenv("KAFKA_BROKER", "localhost:9092")
 
 
@@ -24,8 +25,17 @@ async def main() -> None:
     print(f"Connecting to Kafka at {bootstrap_servers}")
     print(f"Producing ticks for symbol '{symbol}' every {tick_interval} seconds")
 
-    await run_producer(bootstrap_servers=bootstrap_servers, tick_stream=stream)
+    await run_producer(
+        bootstrap_servers=bootstrap_servers,
+        tick_stream=stream,
+        service_name="ingestion-service",
+    )
 
 
 if __name__ == "__main__":
+    # Start metrics HTTP server on configurable port
+    metrics_port = int(os.getenv("METRICS_PORT", "8001"))
+    print(f"Starting ingestion metrics server on port {metrics_port}")
+    start_http_server(metrics_port)
+
     asyncio.run(main())

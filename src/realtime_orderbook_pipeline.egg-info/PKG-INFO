@@ -6,3 +6,4 @@ Requires-Python: >=3.11
 Requires-Dist: pydantic>=2
 Requires-Dist: aiokafka>=0.10.0
 Requires-Dist: asyncpg>=0.29.0
+Requires-Dist: prometheus-client>=0.20.0
