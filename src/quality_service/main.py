@@ -16,6 +16,9 @@ from common.metrics import (
 )
 from quality_service.repository import init_db_pool, insert_tick
 
+from quality_service.parquet_writer import write_tick_to_parquet
+
+
 KAFKA_TOPIC = "orderbook.raw"
 CONSUMER_GROUP = "quality-service"
 
@@ -81,6 +84,8 @@ async def consume_and_validate() -> None:
                 service="quality-service",
                 symbol=tick.symbol,
             ).inc()
+            # write to Parquet (cold store)
+            write_tick_to_parquet(tick)
 
     finally:
         await consumer.stop()

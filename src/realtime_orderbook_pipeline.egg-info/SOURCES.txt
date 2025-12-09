@@ -2,6 +2,7 @@ README.md
 pyproject.toml
 src/common/__init__.py
 src/common/config.py
+src/common/metrics.py
 src/common/models.py
 src/ingestion_service/__init__.py
 src/ingestion_service/main.py

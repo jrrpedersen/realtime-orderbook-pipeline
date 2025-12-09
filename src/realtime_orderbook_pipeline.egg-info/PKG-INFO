@@ -7,3 +7,6 @@ Requires-Dist: pydantic>=2
 Requires-Dist: aiokafka>=0.10.0
 Requires-Dist: asyncpg>=0.29.0
 Requires-Dist: prometheus-client>=0.20.0
+Requires-Dist: pandas>=2.2.0
+Requires-Dist: pyarrow>=18.0.0
+Requires-Dist: great_expectations>=0.18.0
