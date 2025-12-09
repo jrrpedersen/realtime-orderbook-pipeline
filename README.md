@@ -6,242 +6,179 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](#)
 [![Async](https://img.shields.io/badge/Async-asyncio-purple.svg)](#)
 [![Data](https://img.shields.io/badge/Data-Streaming-orange.svg)](#)
-[![Phase](https://img.shields.io/badge/Phase-2%20Kafka%20→%20Postgres-blue.svg)](#)
 [![Observability](https://img.shields.io/badge/Observability-Prometheus%20%2B%20Grafana-orange.svg)](#)
+[![Parquet](https://img.shields.io/badge/Parquet-Cold_Store-orange.svg)](#)
 
 > **Category:** Data Engineering · Streaming Systems · Trading Infrastructure
 
-This repository demonstrates a **production-inspired real-time data pipeline** for market and trading data.
-It simulates high-frequency orderbook ticks, processes them through a streaming backbone, enforces data quality,
-persists trusted data, and exposes operational metrics for observability.
+A **production-inspired real-time data pipeline** for ingesting, validating, storing, monitoring, and auditing high-frequency orderbook data.
 
-The project is built incrementally in phases to mirror how real trading data platforms evolve.
+This project demonstrates how to build a **trustworthy data foundation** for trading and analytics systems, with explicit attention to data quality, fault tolerance, observability, and hot vs. cold storage separation.
 
 ---
 
-## Architecture (Phases 1–3)
+## 🧩 Problem Statement
 
-```text
-[Price Simulator]
-        |
-        v
-[Kafka topic: orderbook.raw]
-        |
-        v
-[Quality Service]
-  - schema validation
-  - domain checks
-        |
-        v
-[Postgres (hot storage)]
+Modern trading systems rely on data that is:
+- always available
+- timely
+- internally consistent
+- auditable after the fact
+
+This project models a realistic data foundation for such systems:
+- real-time ingestion of orderbook events
+- streaming validation safeguards
+- low-latency “hot” storage
+- immutable “cold” historical storage
+- batch-level data quality audits
+- full system observability
+
+---
+
+## 🏗 High-Level Architecture
+
+```
+            +-------------------+
+            |  Ingestion Service |
+            |  (Python, Kafka)  |
+            +---------+---------+
+                      |
+                      v
+                Kafka (raw ticks)
+                      |
+                      v
+            +-------------------+
+            |  Quality Service  |
+            |  - schema checks |
+            |  - domain rules  |
+            +----+---------+---+
+                 |         |
+                 |         |
+                 v         v
+         Postgres (Hot)   Parquet Lake (Cold)
+             |                 |
+             |                 v
+             |         Batch Quality Audits
+             |       (Great Expectations)
+             |
+     Dashboards / Queries
 
 Monitoring:
-[Ingestion Service] ---> /metrics ---> Prometheus ---> Grafana
-[Quality Service]   ---> /metrics ---> Prometheus ---> Grafana
+Ingestion + Quality services → Prometheus → Grafana
 ```
 
 ---
 
-## Phase 1 – Ingestion & Kafka
+## 📦 Project Structure
 
-**Goal:** Reliable, replayable ingestion of streaming market data.
-
-### What is implemented
-
-- Python-based ingestion service
-- Simulated orderbook tick generator
-- Kafka as a durable, replayable event log
-- JSON serialization for events
-- Docker Compose–based local infrastructure
-
-Kafka acts as the system of record for all raw market events.
-
----
-
-## Phase 2 – Validation & Hot Storage
-
-**Goal:** Convert raw events into trusted, queryable data.
-
-### What is implemented
-
-- Kafka consumer service (quality service)
-- Schema validation using a shared domain model
-- Basic market integrity checks (e.g. bid < ask)
-- Asynchronous writes to Postgres
-- Append-only hot storage for validated ticks
-
-Only validated data is persisted, protecting downstream consumers.
-
----
-
-## Phase 3 – Observability & Monitoring
-
-**Goal:** Make the pipeline observable and production-ready.
-
-### What is implemented
-
-- Prometheus for metrics collection
-- Grafana for visualization
-- Application-level metrics emitted by services:
-  - ticks produced
-  - ticks validated / rejected
-  - database inserts
-  - ingestion lag
-- Live dashboards showing pipeline health and throughput
-
-Prometheus scrapes metrics from each service via `/metrics`.
-Grafana queries Prometheus to visualize trends and rates.
-
----
-
-## Project Structure
-
-```text
+```
 realtime-orderbook-pipeline/
-├── README.md
-├── .gitignore
+├── src/
+│   ├── ingestion_service/
+│   ├── quality_service/
+│   ├── data_audit/
+│   └── common/
+├── data/
+│   └── lake/
+├── infra/
+│   ├── prometheus/
+│   └── grafana/
+├── docs/
+│   ├── Phase3_Observability.md
+│   └── Phase4_Cold_Storage_and_GX.md
 ├── docker-compose.yml
 ├── pyproject.toml
-├── scripts/
-│   └── init_db.sql
-├── infra/
-│   └── prometheus/
-│       └── prometheus.yml
-└── src/
-    ├── common/
-    │   ├── models.py
-    │   ├── config.py
-    │   └── metrics.py
-    ├── ingestion_service/
-    │   ├── main.py
-    │   ├── producer.py
-    │   └── simulator.py
-    └── quality_service/
-        ├── main.py
-        ├── repository.py
-        └── validator.py
+└── README.md
 ```
 
 ---
 
-## Running the Pipeline Locally
+## 🔁 Pipeline Phases
 
-### 1. Start infrastructure services
+### Phase 1 – Ingestion & Streaming
+- Simulated high-frequency orderbook ticks
+- Kafka as a durable, decoupled buffer
+
+### Phase 2 – Streaming Validation & Hot Storage
+- Schema and domain validation
+- Valid data persisted to Postgres
+
+### Phase 3 – Observability
+- Prometheus metrics exposed by services
+- Grafana dashboards for system health
+
+### Phase 4 – Cold Storage & Batch Audits
+- Parquet-based data lake
+- Offline Great Expectations audits
+
+---
+
+## 🔥 Hot vs ❄️ Cold Storage
+
+| Layer | Purpose | Technology |
+|-----|-------|------------|
+| Hot store | Low-latency queries | Postgres |
+| Cold store | Historical analytics | Parquet |
+
+Data is written to hot and cold stores independently after validation.
+
+---
+
+## ✅ Data Quality Strategy
+
+**Streaming (real-time):**
+- Enforced in the quality service
+
+**Batch (offline):**
+- Great Expectations over Parquet data
+
+---
+
+## 📊 Observability
+
+Each service exposes Prometheus metrics.
+Grafana provides real-time dashboards for ingestion and validation throughput.
+
+---
+
+## 🧪 Running the Project Locally
 
 ```bash
-docker compose up
+docker-compose up -d
 ```
-
-This starts:
-- Kafka + Zookeeper
-- Postgres (hot storage)
-- Prometheus
-- Grafana
-
----
-
-### 2. Start the quality service
-
-```bash
-cd src
-python -m quality_service.main
-```
-
-Consumes from Kafka, validates ticks, writes to Postgres, and exposes metrics.
-
----
-
-### 3. Start the ingestion service
 
 ```bash
 cd src
 python -m ingestion_service.main
 ```
 
-Produces simulated orderbook ticks to Kafka and exposes metrics.
+```bash
+cd src
+python -m quality_service.main
+```
 
----
-
-## Verifying the Pipeline
-
-### Kafka
-
-Validate consumption using Kafka console tools or by observing the quality service logs.
-
----
-
-### Postgres
-
-Connect to Postgres and inspect stored ticks:
-
-```sql
-SELECT COUNT(*) FROM ticks;
-SELECT symbol, event_time, bid_price, ask_price
-FROM ticks
-ORDER BY event_time DESC
-LIMIT 10;
+```bash
+python -m data_audit.audit_parquet --symbol TTF-GAS --date 2025-12-09
 ```
 
 ---
 
-### Prometheus
+## 🧠 Design Decisions
 
-Open:
-```
-http://localhost:9090
-```
-
-Example queries:
-```promql
-rate(ticks_produced_total[1m])
-rate(ticks_valid_total[1m])
-```
+- Kafka for reliable streaming
+- Parquet for long-term storage
+- Explicit separation of streaming and batch validation
+- Version-pinned data tooling
 
 ---
 
-### Grafana
+## 🚀 Future Extensions
 
-Open:
-```
-http://localhost:3000
-```
+- Parquet compaction
+- Retention policies
+- Schema evolution
+- Flink-based processing
 
-(Default credentials: `admin` / `admin`)
-
-Create dashboards using Prometheus queries to visualize:
-- ingestion throughput
-- validation rates
-- lag distributions
-
----
-
-## Design Notes
-
-- Kafka provides durability, replay, and decoupling
-- Validation is isolated in a stateless service
-- Postgres serves as a hot, queryable store
-- Observability is treated as a first-class concern
-- The system favors simplicity and clarity over premature complexity
-
-Technologies like Flink or Elasticsearch are natural future extensions but are intentionally not introduced yet.
-
----
-
-## Roadmap
-
-✅ Phase 1 – Ingestion + Kafka  
-✅ Phase 2 – Validation + Postgres (hot storage)  
-✅ Phase 3 – Monitoring with Prometheus & Grafana  
-⬜ Phase 4 – Cold storage (Parquet / S3-style) + data quality frameworks  
-⬜ Phase 5 – APIs, replay workflows, and resilience patterns
-
----
-
-## Disclaimer
-
-This project is for learning and demonstration purposes.
-It intentionally simplifies aspects such as authentication, security, and scaling,
-while preserving core architectural and operational concepts used in production systems.
 
 ---
 
