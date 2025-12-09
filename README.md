@@ -1,4 +1,11 @@
 # Realtime Orderbook Pipeline (Phase 1 – Ingestion + Kafka)
+[![Status](https://img.shields.io/badge/Project-Portfolio-green.svg)](#)
+[![Phase](https://img.shields.io/badge/Phase-1%20Ingestion-blue.svg)](#)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](#)
+[![Kafka](https://img.shields.io/badge/Kafka-Streaming-black.svg)](#)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](#)
+[![Async](https://img.shields.io/badge/Async-asyncio-purple.svg)](#)
+[![Data](https://img.shields.io/badge/Data-Streaming-orange.svg)](#)
 
 This repository is a **toy but production-inspired real-time market data pipeline**, designed to mirror how trading and energy-market data platforms ingest and transport high-frequency data.
 
