@@ -7,6 +7,8 @@
 [![Async](https://img.shields.io/badge/Async-asyncio-purple.svg)](#)
 [![Data](https://img.shields.io/badge/Data-Streaming-orange.svg)](#)
 
+> **Category:** Data Engineering · Streaming Systems · Trading Infrastructure
+
 This repository is a **toy but production-inspired real-time market data pipeline**, designed to mirror how trading and energy-market data platforms ingest and transport high-frequency data.
 
 Phase 1 focuses on **data ingestion and transport**:
@@ -224,3 +226,18 @@ This project is inspired by real-world trading and data-engineering systems, par
 - data quality guarantees
 - hot / cold storage patterns
 - operational observability
+
+## Technology Stack / Tags
+
+- Python
+- Kafka
+- Streaming Data
+- Market Data
+- Orderbook
+- Data Engineering
+- Event-Driven Architecture
+- Async IO
+- Docker
+- Docker Compose
+- Trading Systems
+- Energy Markets
