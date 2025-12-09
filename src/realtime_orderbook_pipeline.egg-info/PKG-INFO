@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: realtime-orderbook-pipeline
+Version: 0.1.0
+Summary: Toy real-time orderbook pipeline: Phase 1 - ingestion + Kafka.
+Requires-Python: >=3.11
+Requires-Dist: pydantic>=2
+Requires-Dist: aiokafka>=0.10.0
