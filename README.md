@@ -1,31 +1,25 @@
 # Realtime Orderbook Pipeline
 
-[![Status](https://img.shields.io/badge/Project-Portfolio-green.svg)](#)
-[![Phase](https://img.shields.io/badge/Phase-1%20Ingestion-blue.svg)](#)
+[![Phase](https://img.shields.io/badge/Phase-3%20Monitoring-blue.svg)](#)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](#)
 [![Kafka](https://img.shields.io/badge/Kafka-Streaming-black.svg)](#)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](#)
 [![Async](https://img.shields.io/badge/Async-asyncio-purple.svg)](#)
 [![Data](https://img.shields.io/badge/Data-Streaming-orange.svg)](#)
 [![Phase](https://img.shields.io/badge/Phase-2%20Kafka%20→%20Postgres-blue.svg)](#)
+[![Observability](https://img.shields.io/badge/Observability-Prometheus%20%2B%20Grafana-orange.svg)](#)
 
 > **Category:** Data Engineering · Streaming Systems · Trading Infrastructure
 
-This repository is a **toy but production-inspired real-time market data pipeline**, designed to mirror how trading and energy-market data platforms ingest and transport high-frequency data.
+This repository demonstrates a **production-inspired real-time data pipeline** for market and trading data.
+It simulates high-frequency orderbook ticks, processes them through a streaming backbone, enforces data quality,
+persists trusted data, and exposes operational metrics for observability.
 
-Phase 1 focuses on **data ingestion and transport**:
-
-- A Python-based simulator generates realistic orderbook “ticks”
-- Kafka acts as the central durable event log
-- Ticks are serialized as structured JSON and published to Kafka
-- Kafka runs locally via Docker, simulating production infrastructure
-- End-to-end data flow is verified using Kafka’s console consumer
-
-Later phases extend the pipeline with validation, storage, monitoring, and APIs.
+The project is built incrementally in phases to mirror how real trading data platforms evolve.
 
 ---
 
-## Architecture (Phases 1–2)
+## Architecture (Phases 1–3)
 
 ```text
 [Price Simulator]
@@ -36,15 +30,71 @@ Later phases extend the pipeline with validation, storage, monitoring, and APIs.
         v
 [Quality Service]
   - schema validation
-  - market integrity checks
+  - domain checks
         |
         v
 [Postgres (hot storage)]
+
+Monitoring:
+[Ingestion Service] ---> /metrics ---> Prometheus ---> Grafana
+[Quality Service]   ---> /metrics ---> Prometheus ---> Grafana
 ```
 
 ---
 
-## Repository Layout
+## Phase 1 – Ingestion & Kafka
+
+**Goal:** Reliable, replayable ingestion of streaming market data.
+
+### What is implemented
+
+- Python-based ingestion service
+- Simulated orderbook tick generator
+- Kafka as a durable, replayable event log
+- JSON serialization for events
+- Docker Compose–based local infrastructure
+
+Kafka acts as the system of record for all raw market events.
+
+---
+
+## Phase 2 – Validation & Hot Storage
+
+**Goal:** Convert raw events into trusted, queryable data.
+
+### What is implemented
+
+- Kafka consumer service (quality service)
+- Schema validation using a shared domain model
+- Basic market integrity checks (e.g. bid < ask)
+- Asynchronous writes to Postgres
+- Append-only hot storage for validated ticks
+
+Only validated data is persisted, protecting downstream consumers.
+
+---
+
+## Phase 3 – Observability & Monitoring
+
+**Goal:** Make the pipeline observable and production-ready.
+
+### What is implemented
+
+- Prometheus for metrics collection
+- Grafana for visualization
+- Application-level metrics emitted by services:
+  - ticks produced
+  - ticks validated / rejected
+  - database inserts
+  - ingestion lag
+- Live dashboards showing pipeline health and throughput
+
+Prometheus scrapes metrics from each service via `/metrics`.
+Grafana queries Prometheus to visualize trends and rates.
+
+---
+
+## Project Structure
 
 ```text
 realtime-orderbook-pipeline/
@@ -54,18 +104,19 @@ realtime-orderbook-pipeline/
 ├── pyproject.toml
 ├── scripts/
 │   └── init_db.sql
+├── infra/
+│   └── prometheus/
+│       └── prometheus.yml
 └── src/
     ├── common/
-    │   ├── __init__.py
     │   ├── models.py
-    │   └── config.py
+    │   ├── config.py
+    │   └── metrics.py
     ├── ingestion_service/
-    │   ├── __init__.py
     │   ├── main.py
     │   ├── producer.py
     │   └── simulator.py
     └── quality_service/
-        ├── __init__.py
         ├── main.py
         ├── repository.py
         └── validator.py
@@ -73,227 +124,127 @@ realtime-orderbook-pipeline/
 
 ---
 
-## Phase 1 Components
+## Running the Pipeline Locally
 
-### Domain Model (`common/models.py`)
-
-Defines a typed `OrderBookTick` model using Pydantic:
-
-- `symbol`
-- `event_time`
-- `received_time`
-- `bid_price` / `ask_price`
-- `bid_volume` / `ask_volume`
-- `sequence_id`
-
-This enforces schema consistency from the moment data is ingested.
-
----
-
-## Phase 2 – Validation + Hot Storage
-
-Phase 2 extends the pipeline with a **quality service** and **hot storage**.
-
-### What Was Added
-
-- A Kafka consumer (`quality_service`)
-- Schema and integrity validation using the domain model
-- Asynchronous writes to Postgres
-- A durable “hot” database holding validated market data
-
-The pipeline now mirrors a real trading data foundation:
-
-- Kafka as the durable event backbone
-- Stateless validation services
-- A relational hot store for fast queries and downstream use
-
----
-
-### Quality Service
-
-The quality service:
-
-- Consumes from the Kafka topic `orderbook.raw`
-- Deserializes JSON payloads
-- Validates ticks using domain rules:
-  - Schema correctness
-  - `bid_price < ask_price`
-- Writes valid ticks into Postgres
-
-Invalid ticks are dropped (and logged), illustrating how data quality gates are applied in practice.
-
----
-
-### Hot Storage (Postgres)
-
-Validated ticks are written into a Postgres table:
-
-```sql
-ticks (
-  symbol,
-  event_time,
-  received_time,
-  bid_price,
-  ask_price,
-  bid_volume,
-  ask_volume,
-  sequence_id
-);
-```
-
----
-
-## Market Data Simulator (`ingestion_service/simulator.py`)
-
-A simple async random-walk simulator that:
-
-- Generates top-of-book bid/ask prices
-- Emits ticks at a configurable frequency
-- Maintains a monotonic per-symbol sequence ID
-- Mimics the structure of real market data feeds
-
----
-
-## Kafka Producer (`ingestion_service/producer.py`)
-
-Publishes ticks to Kafka using `aiokafka`:
-
-- Topic: `orderbook.raw`
-- Message value: JSON-encoded tick
-- Message key: symbol
-- Async, non-blocking send loop
-
----
-
-## Ingestion Entrypoint (`ingestion_service/main.py`)
-
-- Loads configuration from environment variables
-- Starts the simulator
-- Streams ticks into Kafka
-- Logs outgoing events for visibility
-
-This service is structurally similar to a real market data feed handler.
-
----
-
-## Running Phase 1
-
-### Prerequisites
-
-- Docker / Docker Desktop
-- Python 3.11+
-- A virtualenv or Conda-based Python environment
-
----
-
-### 1. Start Kafka
-
-From the project root:
+### 1. Start infrastructure services
 
 ```bash
 docker compose up
 ```
 
-Kafka will be available at:
-
-```text
-localhost:9092
-```
-
----
-
-### 2. Install Python Dependencies
-
-```bash
-pip install -e .
-```
+This starts:
+- Kafka + Zookeeper
+- Postgres (hot storage)
+- Prometheus
+- Grafana
 
 ---
 
-### 3. Run the Ingestion Service
+### 2. Start the quality service
 
 ```bash
 cd src
-python -m ingestion_service.main
-```
-
-Expected output:
-
-```text
-Connecting to Kafka at localhost:9092
-Producing ticks for symbol 'TTF-GAS' every 0.05 seconds
-Sending tick: {...}
-```
-
----
-
-## Verifying Data in Kafka
-
-```bash
-docker ps
-docker exec -it <kafka-container-name> bash
-```
-
-```bash
-kafka-console-consumer   --bootstrap-server localhost:9092   --topic orderbook.raw   --from-beginning
-```
-
----
-
-## Kafka Concept Demonstrated
-
-**Kafka is a log, not a queue**:
-
-- Producers write messages once
-- Kafka stores them durably
-- Consumers read via offsets
-- Messages are not deleted when consumed
-
----
-
-## Running Phases 1–2 Together
-
-```bash
-docker compose up
 python -m quality_service.main
+```
+
+Consumes from Kafka, validates ticks, writes to Postgres, and exposes metrics.
+
+---
+
+### 3. Start the ingestion service
+
+```bash
 cd src
 python -m ingestion_service.main
 ```
 
-Verify Postgres:
+Produces simulated orderbook ticks to Kafka and exposes metrics.
 
-```bash
-docker exec -it <db-container> psql -U market -d marketdata
-```
+---
+
+## Verifying the Pipeline
+
+### Kafka
+
+Validate consumption using Kafka console tools or by observing the quality service logs.
+
+---
+
+### Postgres
+
+Connect to Postgres and inspect stored ticks:
 
 ```sql
 SELECT COUNT(*) FROM ticks;
-SELECT * FROM ticks ORDER BY event_time DESC LIMIT 10;
+SELECT symbol, event_time, bid_price, ask_price
+FROM ticks
+ORDER BY event_time DESC
+LIMIT 10;
 ```
+
+---
+
+### Prometheus
+
+Open:
+```
+http://localhost:9090
+```
+
+Example queries:
+```promql
+rate(ticks_produced_total[1m])
+rate(ticks_valid_total[1m])
+```
+
+---
+
+### Grafana
+
+Open:
+```
+http://localhost:3000
+```
+
+(Default credentials: `admin` / `admin`)
+
+Create dashboards using Prometheus queries to visualize:
+- ingestion throughput
+- validation rates
+- lag distributions
+
+---
+
+## Design Notes
+
+- Kafka provides durability, replay, and decoupling
+- Validation is isolated in a stateless service
+- Postgres serves as a hot, queryable store
+- Observability is treated as a first-class concern
+- The system favors simplicity and clarity over premature complexity
+
+Technologies like Flink or Elasticsearch are natural future extensions but are intentionally not introduced yet.
 
 ---
 
 ## Roadmap
 
-- ✅ Phase 1 – Ingestion + Kafka
-- ✅ Phase 2 – Validation + Postgres (hot storage)
-- ⬜ Phase 3 – Monitoring (Prometheus + Grafana)
-- ⬜ Phase 4 – Cold storage (Parquet / S3-style) + Great Expectations
-- ⬜ Phase 5 – API layer, replay, and resilience patterns
+✅ Phase 1 – Ingestion + Kafka  
+✅ Phase 2 – Validation + Postgres (hot storage)  
+✅ Phase 3 – Monitoring with Prometheus & Grafana  
+⬜ Phase 4 – Cold storage (Parquet / S3-style) + data quality frameworks  
+⬜ Phase 5 – APIs, replay workflows, and resilience patterns
 
 ---
 
-## Motivation
+## Disclaimer
 
-Inspired by real-world trading and market-data systems handling:
-
-- High-frequency feeds
-- Data quality guarantees
-- Hot / cold storage patterns
-- Operational observability
+This project is for learning and demonstration purposes.
+It intentionally simplifies aspects such as authentication, security, and scaling,
+while preserving core architectural and operational concepts used in production systems.
 
 ---
 
 ## Technology Stack / Tags
 
-Python · Kafka · Streaming Data · Market Data · Orderbook · Data Engineering · Event-Driven Architecture · Async IO · Docker · Trading Systems
+Python · Kafka · Streaming Data · Market Data · Orderbook · Data Engineering · Event-Driven Architecture · Async IO · Docker · Trading Systems · Prometheus · Grafana
