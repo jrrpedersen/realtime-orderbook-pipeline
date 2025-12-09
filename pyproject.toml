@@ -1,11 +1,12 @@
 [project]
 name = "realtime-orderbook-pipeline"
 version = "0.1.0"
-description = "Toy real-time orderbook pipeline: Phase 1 - ingestion + Kafka."
+description = "Toy real-time orderbook pipeline: Phase 1+2 - ingestion + Kafka + Postgres."
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2",
     "aiokafka>=0.10.0",
+    "asyncpg>=0.29.0",
 ]
 
 [build-system]
